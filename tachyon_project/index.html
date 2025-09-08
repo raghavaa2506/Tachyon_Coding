@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tachyon 2.0 - Competitive Programming Context</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" data-name="vs/editor/editor.main" href="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.34.1/min/vs/editor/editor.main.css">
+    <style>
+        :root { --left-panel-width: 400px; --right-panel-width: 400px; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: #e5e7eb; overflow: hidden; }
+        .resizable-handle { cursor: col-resize; width: 8px; background-color: #374151; transition: background-color 0.2s ease; z-index: 10; }
+        .resizable-handle:hover { background-color: #4f46e5; }
+        .main-grid { grid-template-columns: var(--left-panel-width) 8px 1fr 8px var(--right-panel-width); }
+        .tab-active { background-color: #1f2937; border-bottom: 2px solid #4f46e5; color: #ffffff; }
+        .tab-inactive { background-color: transparent; border-bottom: 2px solid transparent; color: #9ca3af; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #1f2937; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 3px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+        .fade-in { animation: fadeIn 0.5s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .modal { transition: all 0.3s ease; backdrop-filter: blur(10px); }
+        .modal-content { transition: transform 0.3s ease; }
+        .modal.hidden { opacity: 0; visibility: hidden; }
+        .modal.hidden .modal-content { transform: scale(0.95); }
+        .termination-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; text-align: center; background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); }
+        .spinner { animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .glass-effect { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); }
+        .flash-warning { animation: flashWarning 0.7s ease-in-out; }
+        @keyframes flashWarning { 0%, 100% { background-color: #7f1d1d; } 50% { background-color: #ef4444; color: white; } }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <div id="auth-modal" class="modal fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+        <div class="modal-content glass-effect rounded-2xl p-8 shadow-2xl text-center w-full max-w-md mx-4">
+            <div class="mb-6">
+                <i class="fas fa-shield-alt text-6xl text-indigo-400 mb-4"></i>
+                <h2 id="auth-title" class="text-3xl font-bold text-white mb-2">Tachyon 2.0</h2>
+                <p class="text-gray-300">Sign in or create an account to start.</p>
+            </div>
+            <form id="auth-form" class="space-y-4">
+                <div id="auth-error" class="text-red-400 text-sm hidden mb-4"></div>
+                <input type="text" id="auth-name" placeholder="Full Name" required class="w-full bg-gray-800/80 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all hidden" disabled>
+                <input type="email" id="auth-email" placeholder="Email Address" required class="w-full bg-gray-800/80 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
+                <input type="password" id="auth-password" placeholder="Password" required class="w-full bg-gray-800/80 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
+                <button type="submit" id="auth-submit-btn" class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold py-3 px-6 rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 flex items-center justify-center h-12 shadow-lg">
+                    <span id="auth-btn-text">Sign In</span>
+                    <i id="auth-spinner" class="fas fa-spinner spinner ml-2 hidden"></i>
+                </button>
+            </form>
+            <p class="text-sm text-gray-400 mt-4">
+                <span id="auth-prompt-text">Don't have an account?</span>
+                <a href="#" id="auth-toggle-link" class="font-semibold text-indigo-400 hover:underline">Sign Up</a>
+            </p>
+        </div>
+    </div>
+
+    <div id="instructions-modal" class="modal fixed inset-0 bg-black/80 flex items-center justify-center z-50 hidden">
+        <div class="modal-content glass-effect rounded-2xl p-8 shadow-2xl w-full max-w-2xl mx-4 text-left">
+             <div class="flex items-center mb-6">
+                <i class="fas fa-book-open text-5xl text-indigo-400 mr-5"></i>
+                <div>
+                    <h2 class="text-3xl font-bold text-white">Assessment Guidelines</h2>
+                    <p class="text-gray-300">Please read the following instructions carefully before you begin.</p>
+                </div>
+            </div>
+            <ul class="space-y-4 text-gray-300 mb-8 list-disc list-inside">
+                <li>This assessment has a total duration of <strong>3 hours</strong>. The timer will start as soon as you click the "Start Assessment" button.</li>
+                <li>You will be presented with a set of programming challenges. Your score will be based on the number of test cases you pass for each submitted problem.</li>
+                <li>You can switch between problems at any time using the dropdown menu at the top.</li>
+                <li class="font-semibold text-yellow-300">
+                    <i class="fas fa-exclamation-triangle mr-2"></i><strong>Anti-Cheating Policy:</strong> Navigating away from this tab or window is strictly monitored. You are allowed a maximum of <strong>3</strong> chances. Exceeding this limit will result in the immediate termination of your assessment.
+                </li>
+                <li>Ensure your code is written within the provided function stubs. Do not modify the function names or signatures.</li>
+                <li>Once the time limit is reached or the test is terminated, your session will end, and you will be automatically signed out.</li>
+                <li>If you encounter any technical issues during the assessment, please contact support immediately.</li>
+                <li>Good luck!! Happy coding!! with <strong>Tachyon 2.0</strong>!  </li>
+            </ul>
+            <button id="start-test-btn" class="w-full bg-gradient-to-r from-green-600 to-green-700 text-white font-bold py-3 px-6 rounded-lg hover:from-green-700 hover:to-green-800 transition-all duration-200 shadow-lg">
+                I Understand, Start Assessment
+            </button>
+        </div>
+    </div>
+
+    <div id="main-app" class="hidden h-screen flex flex-col">
+        <header class="bg-gray-900/90 backdrop-blur-lg border-b border-gray-700/50 shadow-2xl p-4 flex justify-between items-center z-20 fade-in">
+            <div class="flex items-center space-x-6">
+                <div class="flex items-center space-x-3">
+                    <i class="fas fa-shield-alt text-3xl text-indigo-400"></i>
+                    <div>
+                        <h1 class="text-2xl font-bold text-white">Tachyon 2.0</h1>
+                        <p class="text-xs text-gray-400">Competitive Programming Context</p>
+                    </div>
+                </div>
+                <select id="problem-select" class="bg-gray-700/80 text-white border border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"></select>
+            </div>
+            <div class="flex items-center space-x-4">
+                <div class="text-right">
+                    <div id="user-display-name" class="font-bold text-sm text-white"></div>
+                    <div id="user-display-email" class="text-xs text-gray-400"></div>
+                </div>
+                <div class="bg-gradient-to-r from-green-600 to-green-700 px-4 py-2 rounded-lg shadow-lg">
+                    <span class="font-bold text-white">Score: <span id="score">0</span></span>
+                </div>
+                 <div id="violation-tracker" class="bg-yellow-900/80 backdrop-blur border border-yellow-700 rounded-lg px-4 py-2 flex items-center transition-all">
+                    <i class="fas fa-exclamation-triangle mr-2 text-yellow-400"></i>
+                    <span class="font-mono text-sm text-yellow-300">Violations: <span id="violation-count">0</span> / 3</span>
+                </div>
+                <div class="bg-gray-800/80 backdrop-blur border border-gray-600 rounded-lg px-4 py-2">
+                    <span class="font-mono text-lg text-green-400" id="timer">03:00:00</span>
+                </div>
+                <button id="signout-btn" class="px-4 py-2 text-sm bg-red-600 hover:bg-red-700 rounded-lg transition-all">Sign Out</button>
+            </div>
+        </header>
+
+        <main class="flex-grow grid main-grid h-[calc(100vh-80px)] relative">
+            <div id="left-panel" class="bg-gray-900/50 backdrop-blur flex flex-col p-4 custom-scrollbar overflow-y-auto fade-in border-r border-gray-700/50">
+                <div id="problem-content" class="prose prose-invert max-w-none"></div>
+            </div>
+            <div id="left-resize-handle" class="resizable-handle"></div>
+            <div id="center-panel" class="flex flex-col bg-gray-800/30 backdrop-blur fade-in">
+                <div class="flex items-center justify-between bg-gray-900/80 backdrop-blur p-3 border-b border-gray-700/50">
+                    <select id="language-select" class="bg-gray-700/80 text-white border border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="javascript">JavaScript (Node.js)</option>
+                        <option value="python">Python</option>
+                        <option value="cpp">C++</option>
+                        <option value="go">Go</option>
+                        <option value="rust">Rust</option>
+                    </select>
+                </div>
+                <div id="editor-container" class="flex-grow"></div>
+            </div>
+            <div id="right-resize-handle" class="resizable-handle"></div>
+            <div id="right-panel" class="bg-gray-900/50 backdrop-blur flex flex-col custom-scrollbar overflow-y-auto fade-in border-l border-gray-700/50">
+                <div class="flex border-b border-gray-700/50">
+                    <button id="tab-testcases" class="flex-1 p-4 text-sm font-medium tab-active transition-all">Test Cases</button>
+                    <button id="tab-output" class="flex-1 p-4 text-sm font-medium tab-inactive transition-all">Output</button>
+                </div>
+                <div id="testcases-content" class="p-4 flex-grow"></div>
+                <div id="output-content" class="p-4 flex-grow hidden">
+                    <div id="output-placeholder" class="text-center text-gray-500 mt-8">
+                        <i class="fas fa-play-circle text-4xl mb-4 text-gray-600"></i>
+                        <p>Run your code to see the output.</p>
+                    </div>
+                    <div id="output-result" class="hidden"></div>
+                </div>
+                <div class="p-4 bg-gray-900/80 backdrop-blur border-t border-gray-700/50 mt-auto">
+                    <div class="flex space-x-4">
+                        <button id="run-btn" class="flex-1 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white font-semibold py-3 px-6 rounded-lg hover:from-indigo-700 hover:to-indigo-800 transition-all">
+                            <i class="fas fa-play mr-2"></i>Run Code
+                        </button>
+                        <button id="submit-btn" class="flex-1 bg-gradient-to-r from-green-600 to-green-700 text-white font-semibold py-3 px-6 rounded-lg hover:from-green-700 hover:to-green-800 transition-all">
+                            <i class="fas fa-check mr-2"></i>Submit
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <div id="alert-modal" class="modal fixed inset-0 bg-black/80 flex items-center justify-center z-50 hidden">
+        <div class="modal-content glass-effect rounded-2xl p-8 shadow-2xl text-center max-w-md mx-4">
+            <i id="alert-icon" class="fas fa-exclamation-triangle text-6xl text-yellow-400 mb-4"></i>
+            <h2 id="alert-title" class="text-2xl font-bold text-white mb-4"></h2>
+            <p id="alert-message" class="text-gray-300 mb-4"></p>
+            <button id="alert-dismiss" class="px-6 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-all duration-200">
+                Dismiss
+            </button>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.34.1/min/vs/loader.min.js"></script>
+    <script>
+        // --- GLOBAL STATE ---
+        let problems = []; let currentProblem; let editor; let totalScore = 0; let timerInterval; let userDetails = {}; let sessionStartTime = null;
+        let violationCount = 0;
+        const MAX_VIOLATIONS = 3;
+        
+        // --- DOM ELEMENT CACHE ---
+        const getEl = (id) => document.getElementById(id);
+        const elements = {
+            authModal: getEl('auth-modal'), authForm: getEl('auth-form'), authTitle: getEl('auth-title'), authError: getEl('auth-error'), authName: getEl('auth-name'), authEmail: getEl('auth-email'), authPassword: getEl('auth-password'), authSubmitBtn: getEl('auth-submit-btn'), authBtnText: getEl('auth-btn-text'), authSpinner: getEl('auth-spinner'), authPromptText: getEl('auth-prompt-text'), authToggleLink: getEl('auth-toggle-link'),
+            instructionsModal: getEl('instructions-modal'), startTestBtn: getEl('start-test-btn'),
+            mainApp: getEl('main-app'), signoutBtn: getEl('signout-btn'), timer: getEl('timer'), score: getEl('score'), problemSelect: getEl('problem-select'), problemContent: getEl('problem-content'), testcasesContent: getEl('testcases-content'), langSelect: getEl('language-select'), editorContainer: getEl('editor-container'), runBtn: getEl('run-btn'), submitBtn: getEl('submit-btn'), outputResult: getEl('output-result'), outputPlaceholder: getEl('output-placeholder'), userDisplayName: getEl('user-display-name'), userDisplayEmail: getEl('user-display-email'),
+            leftResizeHandle: getEl('left-resize-handle'), rightResizeHandle: getEl('right-resize-handle'), tabTestcases: getEl('tab-testcases'), tabOutput: getEl('tab-output'), outputContent: getEl('output-content'),
+            alertModal: getEl('alert-modal'), alertIcon: getEl('alert-icon'), alertTitle: getEl('alert-title'), alertMessage: getEl('alert-message'), alertDismiss: getEl('alert-dismiss'),
+            violationTracker: getEl('violation-tracker'), violationCount: getEl('violation-count'),
+        };
+
+        // --- AUTHENTICATION LOGIC ---
+        let isLoginView = true;
+        function toggleAuthView() { isLoginView = !isLoginView; elements.authError.classList.add('hidden'); elements.authForm.reset(); if (isLoginView) { elements.authTitle.textContent = 'Sign In to Tachyon 2.0'; elements.authName.classList.add('hidden'); elements.authName.disabled = true; elements.authBtnText.textContent = 'Sign In'; elements.authPromptText.textContent = "Don't have an account?"; elements.authToggleLink.textContent = 'Sign Up'; } else { elements.authTitle.textContent = 'Create Your Account'; elements.authName.classList.remove('hidden'); elements.authName.disabled = false; elements.authBtnText.textContent = 'Sign Up'; elements.authPromptText.textContent = 'Already have an account?'; elements.authToggleLink.textContent = 'Sign In'; } }
+        async function handleAuthSubmit(e) { e.preventDefault(); const email = elements.authEmail.value; const password = elements.authPassword.value; const name = elements.authName.value; elements.authSpinner.classList.remove('hidden'); elements.authSubmitBtn.disabled = true; elements.authError.classList.add('hidden'); const endpoint = isLoginView ? '/api/auth/signin' : '/api/auth/signup'; const body = isLoginView ? { email, password } : { name, email, password }; try { const res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); if (!res.ok) { const errorData = await res.json().catch(() => ({ message: 'An unknown error occurred.' })); throw new Error(errorData.message || `HTTP error! status: ${res.status}`); } const data = await res.json(); localStorage.setItem('token', data.token); localStorage.setItem('user', JSON.stringify(data.user)); userDetails = data.user; updateUserDisplay(data.user); elements.authModal.classList.add('hidden'); showModal(elements.instructionsModal); } catch (error) { elements.authError.textContent = error.message; elements.authError.classList.remove('hidden'); } finally { elements.authSpinner.classList.add('hidden'); elements.authSubmitBtn.disabled = false; } }
+        function handleSignOut() { localStorage.removeItem('token'); localStorage.removeItem('user'); window.location.reload(); }
+        
+        // --- APPLICATION INITIALIZATION ---
+        async function startApplication() { elements.mainApp.classList.remove('hidden'); elements.mainApp.classList.add('flex'); try { const token = localStorage.getItem('token'); const res = await fetch('/api/problems', { headers: { 'x-auth-token': token } }); if (!res.ok) throw new Error('Could not fetch problems.'); problems = await res.json(); if (problems.length === 0) throw new Error('No problems loaded from server.'); await initializeMainUI(); startAssessment(); } catch (error) { console.error("Failed to start application:", error); alert("Error: Could not load coding problems. Please try signing in again."); handleSignOut(); } }
+        async function initializeMainUI() { setupProblemSelector(); currentProblem = problems[0]; await setupMonacoEditor(); loadProblem(currentProblem); setupMainEventListeners(); setupTabSwitching(); }
+        window.onload = () => { elements.authToggleLink.addEventListener('click', (e) => { e.preventDefault(); toggleAuthView(); }); elements.authForm.addEventListener('submit', handleAuthSubmit); elements.startTestBtn.addEventListener('click', () => { hideModal(elements.instructionsModal); startApplication(); }); const token = localStorage.getItem('token'); const user = JSON.parse(localStorage.getItem('user')); if (token && user) { userDetails = user; updateUserDisplay(user); elements.authModal.classList.add('hidden'); showModal(elements.instructionsModal); } else { showModal(elements.authModal); } };
+        
+        // --- CORE APP LOGIC & UI FUNCTIONS ---
+        function setupMainEventListeners() { elements.signoutBtn.addEventListener('click', handleSignOut); elements.problemSelect.addEventListener('change', handleProblemChange); elements.langSelect.addEventListener('change', handleLanguageChange); elements.runBtn.addEventListener('click', () => executeCode(false)); elements.submitBtn.addEventListener('click', () => executeCode(true)); document.addEventListener('visibilitychange', handleViolation); window.addEventListener('beforeunload', handlePageUnload); elements.alertDismiss.addEventListener('click', () => hideModal(elements.alertModal)); makeResizable('left'); makeResizable('right'); }
+        function setupProblemSelector() { elements.problemSelect.innerHTML = ''; problems.forEach((problem, index) => { const option = document.createElement('option'); option.value = index; option.textContent = `${problem.title} (${problem.difficulty} - ${problem.points}pts)`; elements.problemSelect.appendChild(option); }); }
+        function loadProblem(problem) { currentProblem = problem; elements.problemContent.innerHTML = `<div class="mb-6"><div class="flex items-center justify-between mb-4"><h2 class="text-2xl font-bold text-white">${problem.title}</h2><div class="flex items-center space-x-3"><span class="px-3 py-1 bg-${getDifficultyColor(problem.difficulty)}-600 text-white text-xs font-semibold rounded-full">${problem.difficulty}</span><span class="px-3 py-1 bg-green-600 text-white text-xs font-semibold rounded-full">${problem.points} Points</span></div></div><div class="prose prose-invert max-w-none text-gray-300">${problem.description}</div></div><div class="space-y-6">${problem.examples.map((example, index) => `<div class="bg-gray-800/50 backdrop-blur rounded-lg p-4 border border-gray-700/50"><h3 class="font-semibold text-indigo-400 mb-3">Example ${index + 1}:</h3><div class="bg-gray-900/50 p-3 rounded-lg font-mono text-sm"><div class="text-green-400"><strong>Input:</strong> ${example.input}</div><div class="text-blue-400"><strong>Output:</strong> ${example.output}</div>${example.explanation ? `<div class="text-gray-400 mt-2"><strong>Explanation:</strong> ${example.explanation}</div>` : ''}</div></div>`).join('')}</div><div class="mt-6"><h3 class="font-semibold text-indigo-400 mb-3">Constraints:</h3><ul class="list-disc list-inside space-y-1 text-gray-300">${problem.constraints.map(c => `<li class="text-sm">${c}</li>`).join('')}</ul></div>`; elements.testcasesContent.innerHTML = `<div class="space-y-4"><h3 class="font-semibold text-white mb-3">Sample Test Cases:</h3>${problem.testCases.slice(0, 3).map((testCase, index) => `<div class="bg-gray-800/50 backdrop-blur rounded-lg p-4 border border-gray-700/50"><div class="flex items-center justify-between mb-2"><span class="font-mono text-sm text-indigo-400">Test Case ${index + 1}</span><span class="text-xs text-gray-500">Sample</span></div><div class="font-mono text-sm space-y-1"><div class="text-gray-300"><strong>Input:</strong> ${JSON.stringify(testCase.args)}</div><div class="text-gray-300"><strong>Expected:</strong> ${JSON.stringify(testCase.expected)}</div></div></div>`).join('')}</div>`; if (editor) { const lang = elements.langSelect.value; const newCode = (problem.initialCode && problem.initialCode[lang]) ? problem.initialCode[lang] : `// Write your ${lang} solution here`; editor.setValue(newCode); monaco.editor.setModelLanguage(editor.getModel(), lang); } }
+        async function setupMonacoEditor() { return new Promise((resolve) => { require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.34.1/min/vs' } }); require(['vs/editor/editor.main'], () => { editor = monaco.editor.create(elements.editorContainer, { value: '', language: 'javascript', theme: 'vs-dark', automaticLayout: true, fontSize: 14, wordWrap: 'on', minimap: { enabled: true } }); resolve(); }); }); }
+        async function executeCode(isSubmission) { const code = editor.getValue(); const language = elements.langSelect.value; if (!code.trim()) { showAlert('No Code', 'Please write some code before running.'); return; } switchTab('output'); showLoadingState(isSubmission); const testCases = isSubmission ? currentProblem.testCases : currentProblem.testCases.slice(0, 3); try { const token = localStorage.getItem('token'); const res = await fetch('/api/execute', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-auth-token': token, }, body: JSON.stringify({ language, code, testCases, problemId: currentProblem.id }), }); if (!res.ok) { const errorData = await res.json(); throw new Error(errorData.message || "Execution failed on the server."); } const results = await res.json(); const processedResults = results.map(r => { let finalStatus = "Runtime Error"; if (r.status === "Accepted") { finalStatus = deepEqual(r.actual, r.expected) ? "Passed" : "Failed"; } return { ...r, status: finalStatus }; }); displayResults(processedResults, isSubmission); if (isSubmission) { handleSubmission(processedResults); } } catch (error) { console.error('Execution API call failed:', error); showExecutionError(error); } }
+        function handleSubmission(results) { const passedCount = results.filter(r => r.status === 'Passed').length; const isSuccess = passedCount === results.length; if (isSuccess) { totalScore += currentProblem.points; elements.score.textContent = totalScore; showAlert('Submission Accepted! 🎉', `You earned ${currentProblem.points} points. Total score: ${totalScore}.`, 'fa-check-circle', 'text-green-400'); } else { showAlert('Submission Failed', `${passedCount}/${results.length} test cases passed.`, 'fa-times-circle', 'text-red-400'); } logSubmission(isSuccess); }
+        async function logSubmission(isSuccess) { const submissionData = { problemId: currentProblem.id, problemTitle: currentProblem.title, code: editor.getValue(), points: isSuccess ? currentProblem.points : 0, language: elements.langSelect.value, }; try { const token = localStorage.getItem('token'); await fetch('/api/submissions', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-auth-token': token }, body: JSON.stringify(submissionData), }); } catch (error) { console.error('Failed to save submission:', error); } }
+        function displayResults(results, isSubmission) { const passedCount = results.filter(r => r.status === 'Passed').length; const passRate = results.length > 0 ? (passedCount / results.length * 100).toFixed(1) : 0; elements.outputResult.innerHTML = `<div class="space-y-4"><div class="bg-gray-800/50 p-4 rounded-lg border border-gray-700/50"><div class="flex items-center justify-between mb-3"><h3 class="font-semibold text-white">${isSubmission ? 'Submission' : 'Test'} Results</h3><span class="text-sm font-mono ${passedCount === results.length ? 'text-green-400' : 'text-yellow-400'}">${passedCount}/${results.length} passed</span></div><div class="w-full bg-gray-700 rounded-full h-2"><div class="bg-gradient-to-r from-green-500 to-green-600 h-2 rounded-full" style="width: ${passRate}%"></div></div></div><div class="space-y-3">${results.map(r => `<div class="bg-gray-800/50 p-4 rounded-lg border-l-4 ${r.status === 'Passed' ? 'border-green-500' : 'border-red-500'}"><div class="flex items-center justify-between mb-2"><span class="font-mono text-sm text-gray-400">Test Case ${r.index + 1}</span><span class="px-2 py-1 rounded-full text-xs font-medium ${r.status === 'Passed' ? 'bg-green-900/50 text-green-300' : 'bg-red-900/50 text-red-300'}">${r.status}</span></div><div class="font-mono text-xs space-y-1"><div class="text-gray-400"><strong>Input:</strong> ${JSON.stringify(r.args)}</div><div class="${r.status === 'Passed' ? 'text-green-400' : 'text-red-400'}"><strong>Output:</strong> ${JSON.stringify(r.actual)}</div><div class="text-gray-400"><strong>Expected:</strong> ${JSON.stringify(r.expected)}</div>${r.error ? `<div class="text-red-400 mt-2"><strong>Error:</strong><pre class="whitespace-pre-wrap">${r.error}</pre></div>` : ''}</div></div>`).join('')}</div></div>`; }
+        const deepEqual = (a, b) => { if (Array.isArray(a) && Array.isArray(b)) { if (a.length !== b.length) return false; return JSON.stringify([...a].sort()) === JSON.stringify([...b].sort()); } return JSON.stringify(a) === JSON.stringify(b); };
+        const getDifficultyColor = (d) => ({ Easy: 'green', Medium: 'yellow', Hard: 'red' })[d] || 'gray';
+        const startAssessment = () => { sessionStartTime = Date.now(); startTimer(); };
+        const handleProblemChange = (e) => loadProblem(problems[e.target.value]);
+        const handleLanguageChange = () => loadProblem(currentProblem);
+        const handlePageUnload = (e) => { if(sessionStartTime) { const confirmationMessage = 'Leaving this page will terminate the assessment. Are you sure?'; e.returnValue = confirmationMessage; return confirmationMessage; } };
+        const showLoadingState = (isSub) => { elements.outputPlaceholder.classList.add('hidden'); elements.outputResult.classList.remove('hidden'); elements.outputResult.innerHTML = `<div class="text-center py-8"><i class="fas fa-cog fa-spin text-3xl text-indigo-400"></i><p class="mt-2">${isSub ? 'Running all test cases...' : 'Executing code...'}</p></div>`; };
+        const showExecutionError = (err) => { elements.outputPlaceholder.classList.add('hidden'); elements.outputResult.classList.remove('hidden'); elements.outputResult.innerHTML = `<div class="bg-red-900/50 p-4 rounded-lg"><h3 class="font-semibold text-white flex items-center"><i class="fas fa-times-circle mr-2"></i>Execution Error</h3><div class="font-mono text-sm text-red-300 mt-2">${err.message}</div></div>`; };
+        const updateUserDisplay = (user) => { elements.userDisplayName.textContent = user.name; elements.userDisplayEmail.textContent = user.email; };
+        function setupTabSwitching() { elements.tabTestcases.addEventListener('click', () => switchTab('testcases')); elements.tabOutput.addEventListener('click', () => switchTab('output')); }
+        function switchTab(activeTab) { const isTestcases = activeTab === 'testcases'; elements.tabTestcases.classList.toggle('tab-active', isTestcases); elements.tabTestcases.classList.toggle('tab-inactive', !isTestcases); elements.tabOutput.classList.toggle('tab-active', !isTestcases); elements.tabOutput.classList.toggle('tab-inactive', isTestcases); elements.testcasesContent.classList.toggle('hidden', !isTestcases); elements.outputContent.classList.toggle('hidden', isTestcases); }
+        function makeResizable(side) { const handle = side === 'left' ? elements.leftResizeHandle : elements.rightResizeHandle; const mouseMoveHandler = e => { if (side === 'left') { const newWidth = Math.max(250, Math.min(e.clientX, 600)); document.documentElement.style.setProperty('--left-panel-width', `${newWidth}px`); } else { const newWidth = Math.max(250, Math.min(window.innerWidth - e.clientX, 600)); document.documentElement.style.setProperty('--right-panel-width', `${newWidth}px`); } }; const mouseUpHandler = () => { document.removeEventListener('mousemove', mouseMoveHandler); document.removeEventListener('mouseup', mouseUpHandler); handle.style.backgroundColor = ''; document.body.style.cursor = ''; if(editor) editor.layout(); }; handle.addEventListener('mousedown', e => { e.preventDefault(); document.addEventListener('mousemove', mouseMoveHandler); document.addEventListener('mouseup', mouseUpHandler); handle.style.backgroundColor = '#4f46e5'; document.body.style.cursor = 'col-resize'; }); }
+        function showAlert(title, message, icon = 'fa-info-circle', iconClass = 'text-blue-400', autoDismiss = true) { elements.alertTitle.textContent = title; elements.alertMessage.textContent = message; elements.alertIcon.className = `fas ${icon} text-6xl ${iconClass} mb-4`; showModal(elements.alertModal); if (autoDismiss) { setTimeout(() => hideModal(elements.alertModal), 5000); } }
+        function showModal(modal) { modal.classList.remove('hidden', 'opacity-0', 'invisible'); modal.classList.add('flex'); }
+        function hideModal(modal) { modal.classList.add('hidden', 'opacity-0', 'invisible'); modal.classList.remove('flex'); }
+        function startTimer() { let timeInSeconds = 3 * 60 * 60; timerInterval = setInterval(() => { timeInSeconds--; const h = Math.floor(timeInSeconds / 3600); const m = Math.floor((timeInSeconds % 3600) / 60); const s = timeInSeconds % 60; elements.timer.textContent = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`; if (timeInSeconds <= 600 && !elements.timer.classList.contains('text-red-400')) { elements.timer.classList.replace('text-green-400', 'text-red-400'); } if (timeInSeconds <= 0) terminateTest("Time limit exceeded."); }, 1000); }
+        
+        // --- Stricter Violation Handling ---
+        function handleViolation() {
+            if (document.hidden && sessionStartTime) {
+                violationCount++;
+                elements.violationCount.textContent = violationCount;
+                elements.violationTracker.classList.add('flash-warning');
+                setTimeout(() => elements.violationTracker.classList.remove('flash-warning'), 700);
+
+                if (violationCount >= MAX_VIOLATIONS) {
+                    terminateTest("Violation: Exceeded tab-switching limit.");
+                } else {
+                    const chancesLeft = MAX_VIOLATIONS - violationCount;
+                    showAlert(
+                        'Warning: Tab Switch Detected', 
+                        `You have navigated away from the assessment. You have ${chancesLeft} chance${chancesLeft > 1 ? 's' : ''} remaining. Further violations will terminate the test.`,
+                        'fa-exclamation-triangle', 'text-yellow-400', false
+                    );
+                }
+            }
+        }
+        function terminateTest(reason) {
+            if (!sessionStartTime) return;
+            clearInterval(timerInterval);
+            sessionStartTime = null;
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            document.body.innerHTML = `<div class="termination-screen"><div class="text-center"><i class="fas fa-ban text-8xl text-red-500 mb-8 animate-pulse"></i><h1 class="text-6xl font-bold text-white mb-6">Assessment Terminated</h1><p class="text-xl text-gray-300 mb-4"><strong class="text-red-400">Reason:</strong> ${reason}</p><p class="text-gray-400 mt-8">You have been signed out. Please contact the administrator for more information.</p></div></div>`;
+        }
+    </script>
+</body>
+</html>

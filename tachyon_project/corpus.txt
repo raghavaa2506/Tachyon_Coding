@@ -1,0 +1,9 @@
+The quick! brown$ fox, jumps over the lazy dog.
+Machine learning is a fascinating field of study.
+Python is a powerful programming language.
+Deep learning and neural networks are important in artificial intelligence.
+This corpus contains multiple sentences for building a vocabulary.
+Natural language processing allows computers to understand human language.
+We can represent text as vectors for machine learning models.
+I love doing machine learning and i am also interested in solving programming questions.
+I am currently working with Sridhar Chimalakonda sir.
